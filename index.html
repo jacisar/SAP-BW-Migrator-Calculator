@@ -47,7 +47,7 @@
   .intro-right .dl-label { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 4px; letter-spacing: 0.06em; text-transform: uppercase; }
 
   .form-wrap { padding: 32px 48px 0; }
-  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 
   .field { background: white; border: 1.5px solid var(--mid); border-radius: 5px; padding: 20px 22px; }
   .field.hidden { display: none; }
@@ -197,20 +197,14 @@
   .cur-btn.active { background: var(--orange); color: white; }
   .cur-divider { width: 1px; background: rgba(255,255,255,0.2); height: 32px; }
 
-  .print-btn {
-    background: transparent; color: rgba(255,255,255,0.7); border: 1.5px solid rgba(255,255,255,0.25);
-    border-radius: 4px; padding: 9px 20px; font-family: inherit; font-size: 12px; font-weight: 600;
-    cursor: pointer; letter-spacing: 0.04em; transition: all 0.15s; display: none;
-  }
-  .print-btn:hover { background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.5); }
-
-  .share-btn {
+  .secondary-btn {
     background: transparent; color: var(--navy); border: 1.5px solid var(--navy);
     border-radius: 5px; padding: 16px 24px; font-family: inherit; font-size: 14px; font-weight: 600;
-    cursor: pointer; letter-spacing: 0.02em; transition: all 0.15s;
+    cursor: pointer; letter-spacing: 0.02em; transition: all 0.15s; display: inline-block;
   }
-  .share-btn:hover { background: var(--navy); color: white; }
-  .share-btn.copied { background: var(--teal); color: white; border-color: var(--teal); }
+  .secondary-btn:hover { background: var(--navy); color: white; }
+  .secondary-btn.hidden { display: none; }
+  .secondary-btn.copied { background: var(--teal); color: white; border-color: var(--teal); }
 
   @media print {
     /* Force full-colour printing */
@@ -405,8 +399,8 @@
 
 <div class="calc-btn-wrap" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
   <button class="calc-btn" onclick="calculate()">Generate Offer &rarr;</button>
-  <button id="shareBtn" class="share-btn" onclick="saveToHash()">&#x1F517;&nbsp; Share / Save Link</button>
-  <button id="printBtn" style="display:none;background:var(--navy);color:white;border:none;border-radius:5px;padding:16px 28px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:0.02em;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="window.print()">&#x238b;&nbsp; Print / Export PDF</button>
+  <button id="shareBtn" class="secondary-btn" onclick="saveToHash()">&#x1F517;&nbsp; Share / Save Link</button>
+  <button id="printBtn" class="secondary-btn hidden" onclick="window.print()">&#x238b;&nbsp; Print / Export PDF</button>
 </div>
 
 <div id="output"></div>
@@ -580,7 +574,7 @@
     var out = document.getElementById('output');
       out.style.display = 'block';
       out.innerHTML = '<div style="background:white;border:1.5px solid var(--mid);border-radius:5px;padding:32px;text-align:center;color:var(--muted);font-size:14px;">Set at least one phase duration to generate an offer.</div>';
-      document.getElementById('printBtn').style.display = 'none';
+      document.getElementById('printBtn').classList.add('hidden');
       out.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
@@ -731,7 +725,7 @@
     out.style.display = 'block';
     out.innerHTML = html;
     if (window._lastSumId) populateSummary(window._lastSumId);
-    document.getElementById('printBtn').style.display = 'inline-block';
+    document.getElementById('printBtn').classList.remove('hidden');
     out.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
