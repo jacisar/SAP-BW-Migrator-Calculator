@@ -400,6 +400,7 @@
 <div class="calc-btn-wrap" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
   <button class="calc-btn" onclick="calculate()">Generate Offer &rarr;</button>
   <button id="shareBtn" class="secondary-btn" onclick="saveToHash()">&#x1F517;&nbsp; Share / Save Link</button>
+  <button class="secondary-btn" onclick="resetForm()">&#x21BA;&nbsp; Reset</button>
   <button id="printBtn" class="secondary-btn hidden" onclick="window.print()">&#x238b;&nbsp; Print / Export PDF</button>
 </div>
 
@@ -799,6 +800,34 @@
     document.getElementById('slack_' + id).style.display = tab === 'slack' ? '' : 'none';
     document.getElementById(id).querySelectorAll('.sum-tab').forEach(function(t){ t.classList.remove('active'); });
     el.classList.add('active');
+  }
+
+  function resetForm() {
+    setCurrency('EUR');
+    setAccount('Direct');
+    state.instances = 1;
+    document.getElementById('instanceVal').textContent = '1';
+    adjInstances(0);
+    setSize('S');
+    state.demoDur = 0;
+    document.getElementById('demoDur').value = 0;
+    document.getElementById('demoLabel').textContent = '0 mo';
+    state.assessDur = 0;
+    document.getElementById('assessDur').value = 0;
+    document.getElementById('assessLabel').textContent = '0 mo';
+    state.migDur = 0;
+    document.getElementById('migDur').value = 0;
+    document.getElementById('migLabel').textContent = '0 mo';
+    state.discount = 0;
+    document.getElementById('discSlider').value = 0;
+    document.getElementById('discLabel').textContent = '0%';
+    updateDiscLabel();
+    document.getElementById('customerName').value = '';
+    document.getElementById('prospectName').value = '';
+    document.getElementById('output').style.display = 'none';
+    document.getElementById('output').innerHTML = '';
+    document.getElementById('printBtn').classList.add('hidden');
+    window.location.hash = '';
   }
 
   function saveToHash() {
