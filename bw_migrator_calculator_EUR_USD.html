@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAP BW Migrator — Offer Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:   #002870;
+    --orange: #FF5539;
+    --teal:   #00b290;
+    --yellow: #ffb600;
+    --blue:   #1c38f5;
+    --off:    #f5f4f1;
+    --mid:    #e8e6e0;
+    --text:   #0d1a36;
+    --muted:  #5e6880;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "DM Sans", Arial, sans-serif; background: var(--off); color: var(--text); font-size: 13px; min-height: 100vh; }
+
+  header {
+    background: white; padding: 20px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 4px solid var(--orange);
+  }
+  .logo-img { height: 36px; display: block; }
+  .badge {
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); font-weight: 400; border: 1px solid var(--mid); padding: 5px 12px; border-radius: 3px;
+  }
+
+  .intro {
+    background: var(--navy); padding: 28px 48px 32px;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 32px;
+  }
+  .intro h1 { font-size: clamp(20px, 2.6vw, 28px); font-weight: 700; color: white; line-height: 1.2; }
+  .intro h1 em { color: var(--orange); font-style: normal; }
+  .intro .sub { margin-top: 8px; font-size: 12px; color: rgba(255,255,255,0.45); font-weight: 300; }
+  .intro-right {
+    flex-shrink: 0; background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 5px;
+    padding: 14px 20px; text-align: center; white-space: nowrap;
+  }
+  .intro-right .deadline { font-size: 28px; font-weight: 700; color: var(--orange); }
+  .intro-right .dl-label { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 4px; letter-spacing: 0.06em; text-transform: uppercase; }
+
+  .form-wrap { padding: 32px 48px 0; }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+
+  .field { background: white; border: 1.5px solid var(--mid); border-radius: 5px; padding: 20px 22px; }
+  .field.hidden { display: none; }
+  .field label { display: block; font-size: 9px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .field input[type=text] {
+    width: 100%; border: 1.5px solid var(--mid); border-radius: 4px;
+    padding: 10px 14px; font-family: inherit; font-size: 14px; color: var(--text);
+    background: var(--off); outline: none; transition: border-color 0.15s;
+  }
+  .field input[type=text]:focus { border-color: var(--navy); background: white; }
+
+  .seg-wrap { display: flex; gap: 6px; }
+  .seg-btn {
+    flex: 1; padding: 10px 8px; border: 1.5px solid var(--mid); border-radius: 4px;
+    background: var(--off); font-family: inherit; font-size: 12px; font-weight: 500;
+    color: var(--muted); cursor: pointer; transition: all 0.15s; text-align: center;
+  }
+  .seg-btn.active-direct { border-color: var(--navy); background: var(--navy); color: white; }
+  .seg-btn.active-si     { border-color: var(--teal);  background: var(--teal);  color: white; }
+
+  .size-seg { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+  .size-card {
+    border: 1.5px solid var(--mid); border-radius: 4px; background: var(--off);
+    padding: 10px 8px; text-align: center; cursor: pointer; transition: all 0.15s;
+  }
+  .size-card .sc-name { font-size: 18px; font-weight: 700; color: var(--muted); }
+  .size-card .sc-range { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .size-card.active { border-color: var(--orange); background: #fff1ee; }
+  .size-card.active .sc-name { color: var(--orange); }
+  .size-card.active .sc-range { color: var(--orange); }
+
+  .duration-row { display: flex; align-items: center; gap: 10px; }
+  .duration-row input[type=range] { flex: 1; accent-color: var(--navy); }
+  .duration-val { font-size: 18px; font-weight: 700; color: var(--navy); min-width: 44px; text-align: right; }
+
+  .disc-row { display: flex; align-items: center; gap: 10px; }
+  .disc-row input[type=range] { flex: 1; accent-color: var(--teal); }
+  .disc-val { font-size: 18px; font-weight: 700; color: var(--teal); min-width: 44px; text-align: right; }
+  .disc-steps { display: flex; justify-content: space-between; margin-top: 5px; padding: 0 2px; }
+  .disc-steps span { font-size: 9px; color: var(--muted); }
+
+  .num-row { display: flex; align-items: center; gap: 10px; }
+  .num-btn {
+    width: 32px; height: 32px; border: 1.5px solid var(--mid); border-radius: 4px;
+    background: var(--off); font-size: 18px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; color: var(--text); font-weight: 600;
+    transition: background 0.1s;
+  }
+  .num-btn:hover { background: var(--mid); }
+  .num-val { font-size: 18px; font-weight: 700; color: var(--navy); min-width: 24px; text-align: center; }
+
+  .field-note { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.4; }
+
+  .calc-btn-wrap { padding: 24px 48px 0; }
+  .calc-btn {
+    background: var(--orange); color: white; border: none; border-radius: 5px;
+    padding: 16px 36px; font-family: inherit; font-size: 15px; font-weight: 700;
+    cursor: pointer; letter-spacing: 0.02em; transition: opacity 0.15s;
+  }
+  .calc-btn:hover { opacity: 0.88; }
+
+  #output { padding: 28px 48px 48px; display: none; }
+
+  .offer-header {
+    background: var(--navy); border-radius: 5px 5px 0 0;
+    padding: 24px 32px; display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .offer-header .oh-left h2 { font-size: 22px; font-weight: 700; color: white; }
+  .offer-header .oh-left .oh-sub { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 4px; }
+  .offer-header .oh-right { text-align: right; }
+  .offer-header .oh-date { font-size: 11px; color: rgba(255,255,255,0.4); }
+  .offer-header .oh-ref { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 4px; }
+
+  .invoice-band {
+    background: white; border: 1.5px solid var(--mid); border-top: none;
+    padding: 20px 32px; display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;
+  }
+  .inv-label { font-size: 9px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .inv-amount { font-size: 36px; font-weight: 700; color: var(--orange); line-height: 1; }
+  .inv-note { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .inv-breakdown { font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .inv-breakdown strong { color: var(--text); font-weight: 600; }
+  .si-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #e6f7f3; border: 1px solid var(--teal);
+    border-radius: 3px; padding: 4px 10px; font-size: 11px; font-weight: 600; color: var(--teal);
+    margin-bottom: 10px;
+  }
+
+  .schedule-wrap {
+    background: white; border: 1.5px solid var(--mid); border-top: none;
+    border-radius: 0 0 5px 5px; overflow: hidden;
+  }
+  .sch-header {
+    background: var(--off); border-bottom: 1.5px solid var(--mid);
+    padding: 10px 32px; font-size: 9px; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--muted); display: grid;
+    grid-template-columns: 60px 1fr 120px 120px 120px;
+  }
+  .sch-row {
+    padding: 12px 32px; display: grid;
+    grid-template-columns: 60px 1fr 120px 120px 120px;
+    border-bottom: 1px solid var(--off); align-items: center;
+  }
+  .sch-row:last-child { border-bottom: none; }
+  .sch-row:hover { background: #fafaf8; }
+  .sch-mo { font-size: 13px; font-weight: 600; color: var(--navy); }
+  .sch-desc { font-size: 12px; }
+  .sch-tag {
+    display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 2px; margin-right: 6px;
+  }
+  .tag-init   { background: #e8ecf5; color: var(--navy); }
+  .tag-demo   { background: #eceeff; color: var(--blue); }
+  .tag-assess { background: #e6f7f3; color: var(--teal); }
+  .tag-mig    { background: #fff1ee; color: var(--orange); }
+  .sch-num { font-size: 12px; color: var(--muted); text-align: right; }
+  .sch-num.total { font-size: 13px; font-weight: 700; color: var(--text); }
+
+  .terms-row {
+    background: white; border: 1.5px solid var(--mid); border-top: none;
+    border-radius: 0 0 5px 5px; display: grid; grid-template-columns: repeat(4,1fr);
+    margin-top: 16px; overflow: hidden;
+  }
+  .term { padding: 16px 20px; border-right: 1px solid var(--mid); }
+  .term:last-child { border-right: none; }
+  .term-k { font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+  .term-v { font-size: 13px; font-weight: 600; color: var(--text); }
+
+  .econ-band {
+    margin-top: 16px; background: var(--navy); border-radius: 5px;
+    padding: 18px 28px; display: flex; gap: 40px;
+  }
+  .econ-k { font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.45); margin-bottom: 4px; }
+  .econ-v { font-size: 22px; font-weight: 700; color: var(--yellow); }
+  .econ-sub { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 3px; }
+
+  .currency-toggle {
+    display: flex; align-items: center; gap: 0;
+    border: 1.5px solid rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden;
+  }
+  .cur-btn {
+    padding: 7px 16px; font-family: inherit; font-size: 12px; font-weight: 700;
+    border: none; cursor: pointer; transition: all 0.15s; letter-spacing: 0.04em;
+    background: transparent; color: rgba(255,255,255,0.45);
+  }
+  .cur-btn.active { background: var(--orange); color: white; }
+  .cur-divider { width: 1px; background: rgba(255,255,255,0.2); height: 32px; }
+
+  .print-btn {
+    background: transparent; color: rgba(255,255,255,0.7); border: 1.5px solid rgba(255,255,255,0.25);
+    border-radius: 4px; padding: 9px 20px; font-family: inherit; font-size: 12px; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.04em; transition: all 0.15s; display: none;
+  }
+  .print-btn:hover { background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.5); }
+
+  @media print {
+    /* Force full-colour printing */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+    /* Hide interactive / form chrome */
+    .intro, .form-wrap, .calc-btn-wrap, .timeline-wrap, .summary-wrap { display: none !important; }
+
+    /* Keep branded header & footer */
+    header { display: flex !important; padding: 14px 32px; border-bottom-width: 3px; }
+    footer  { display: flex !important; padding: 12px 32px; margin-top: 0; }
+
+    body { background: white; margin: 0; }
+    #output { padding: 0 32px 0 !important; display: block !important; }
+
+    /* Clean up radius / shadows for flat print */
+    .offer-header  { border-radius: 0; }
+    .schedule-wrap { border-radius: 0 0 4px 4px; }
+    .terms-row     { border-radius: 0; }
+
+    /* Prevent rows splitting across pages */
+    .sch-row { break-inside: avoid; }
+
+    /* Tighten spacing */
+    .invoice-band { padding: 16px 24px; }
+    .sch-row      { padding: 10px 24px; }
+    .sch-header   { padding: 8px 24px; }
+    .offer-header { padding: 18px 24px; }
+    .econ-band    { padding: 14px 20px; margin-top: 10px; }
+    .terms-row .term { padding: 12px 16px; }
+  }
+
+  footer {
+    background: var(--text); padding: 16px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 0.04em; margin-top: 24px;
+  }
+
+  @media (max-width: 700px) {
+    header, .intro, .form-wrap, .calc-btn-wrap, #output, footer { padding-left: 20px; padding-right: 20px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .sch-header, .sch-row { grid-template-columns: 48px 1fr 90px; }
+    .sch-header span:nth-child(n+4), .sch-row *:nth-child(n+4) { display: none; }
+    .terms-row { grid-template-columns: 1fr 1fr; }
+    .econ-band { flex-direction: column; gap: 16px; }
+  }
+
+  /* ── Timeline Visualizer ── */
+  .timeline-wrap { background: white; border: 1.5px solid var(--mid); border-top: none; padding: 20px 32px 16px; }
+  .timeline-title { font-size: 9px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  .eom-status { margin-top: 10px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .eom-ok   { color: var(--teal); }
+  .eom-warn { color: var(--orange); }
+
+  /* ── Deal Summary ── */
+  .summary-wrap { margin-top: 16px; background: white; border: 1.5px solid var(--mid); border-radius: 5px; overflow: hidden; }
+  .summary-header { background: var(--off); border-bottom: 1.5px solid var(--mid); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .summary-header-left { font-size: 9px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  .copy-btn { background: var(--navy); color: white; border: none; border-radius: 4px; padding: 8px 16px; font-family: inherit; font-size: 11px; font-weight: 700; cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase; transition: opacity 0.15s; }
+  .copy-btn:hover { opacity: 0.85; }
+  .copy-btn.copied { background: var(--teal); }
+  .summary-tabs { display: flex; border-bottom: 1.5px solid var(--mid); }
+  .sum-tab { padding: 10px 20px; font-size: 11px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; color: var(--muted); transition: all 0.15s; margin-bottom: -1.5px; }
+  .sum-tab.active { color: var(--navy); border-bottom-color: var(--navy); }
+  .summary-body { padding: 16px 24px; }
+  .summary-textarea { width: 100%; min-height: 130px; font-family: monospace; font-size: 11px; line-height: 1.65; border: 1.5px solid var(--mid); border-radius: 4px; padding: 12px; color: var(--text); background: var(--off); resize: vertical; }
+</style>
+</head>
+<body>
+
+<header>
+  <img class="logo-img" src="logo.png" alt="BW Migrator" />
+  <span class="badge">Offer Calculator &nbsp;·&nbsp; Confidential</span>
+</header>
+
+<div class="intro">
+  <div>
+    <h1>Generate a tailored offer in <em>60 seconds.</em></h1>
+    <p class="sub" id="intro-sub">V2 tier model &nbsp;&middot;&nbsp; All figures in EUR excl. VAT &nbsp;&middot;&nbsp; Monthly billing in advance</p>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:12px;flex-shrink:0">
+    <div class="currency-toggle">
+      <button class="cur-btn active" id="btn-eur" onclick="setCurrency('EUR')">&#8364; EUR</button>
+      <div class="cur-divider"></div>
+      <button class="cur-btn" id="btn-usd" onclick="setCurrency('USD')">$ USD</button>
+    </div>
+    <div class="intro-right">
+      <div class="deadline">Dec 2027</div>
+      <div class="dl-label">SAP BW 7.5 EOM<br>Market window open</div>
+    </div>
+  </div>
+</div>
+
+<div class="form-wrap">
+  <div class="form-grid">
+
+    <!-- Customer name -->
+    <div class="field">
+      <label>Customer / Company</label>
+      <input type="text" id="customerName" placeholder="e.g. Acme Corporation" />
+    </div>
+
+    <!-- Prospect name -->
+    <div class="field">
+      <label>Prospect Name</label>
+      <input type="text" id="prospectName" placeholder="e.g. Jane Smith" />
+    </div>
+
+    <!-- Account type -->
+    <div class="field">
+      <label>Account Type</label>
+      <div class="seg-wrap">
+        <button class="seg-btn active-direct" id="btn-direct" onclick="setAccount('Direct')">Direct</button>
+        <button class="seg-btn" id="btn-si" onclick="setAccount('SI')">SI Partner</button>
+      </div>
+      <p class="field-note" id="account-note">Standard list pricing. No partner discount applied.</p>
+    </div>
+
+    <!-- BW Instances -->
+    <div class="field">
+      <label>BW Instances</label>
+      <div class="num-row">
+        <button class="num-btn" onclick="adjInstances(-1)">−</button>
+        <span class="num-val" id="instanceVal">1</span>
+        <button class="num-btn" onclick="adjInstances(1)">+</button>
+      </div>
+      <p class="field-note" id="instance-note">Initiation: €8,000 first · €4,000 each additional</p>
+    </div>
+
+    <!-- System size -->
+    <div class="field">
+      <label>BW System Size</label>
+      <div class="size-seg">
+        <div class="size-card active" id="size-S" onclick="setSize('S')">
+          <div class="sc-name">S</div><div class="sc-range">&lt; 10K objects</div>
+        </div>
+        <div class="size-card" id="size-M" onclick="setSize('M')">
+          <div class="sc-name">M</div><div class="sc-range">10K – 25K</div>
+        </div>
+        <div class="size-card" id="size-L" onclick="setSize('L')">
+          <div class="sc-name">L</div><div class="sc-range">&gt; 25K objects</div>
+        </div>
+      </div>
+      <p class="field-note" id="size-note">Migration multiplier: 1× — €15,000/mo</p>
+    </div>
+
+    <!-- Demo duration — SI only -->
+    <div class="field hidden" id="field-demo">
+      <label>Demo Duration</label>
+      <div class="duration-row">
+        <input type="range" min="0" max="6" step="1" value="0" id="demoDur" oninput="updateDemoLabel()">
+        <span class="duration-val" id="demoLabel">0 mo</span>
+      </div>
+      <p class="field-note" id="demo-note">€1,500/mo · Presales environment. Runs before Assessment.</p>
+    </div>
+
+    <!-- Assessment duration -->
+    <div class="field">
+      <label>Assessment Duration</label>
+      <div class="duration-row">
+        <input type="range" min="0" max="6" step="1" value="0" id="assessDur" oninput="updateAssessLabel()">
+        <span class="duration-val" id="assessLabel">0 mo</span>
+      </div>
+      <p class="field-note" id="assess-note">€7,000/mo · Typical: 2–4 months.</p>
+    </div>
+
+    <!-- Migration duration -->
+    <div class="field">
+      <label>Migration Duration</label>
+      <div class="duration-row">
+        <input type="range" min="0" max="30" step="1" value="0" id="migDur" oninput="updateMigLabel()">
+        <span class="duration-val" id="migLabel">0 mo</span>
+      </div>
+      <p class="field-note">Typical: 12–30 months depending on system size.</p>
+    </div>
+
+    <!-- SI discount — SI only -->
+    <div class="field hidden" id="field-discount">
+      <label>SI Partner Discount</label>
+      <div class="disc-row">
+        <input type="range" min="0" max="30" step="5" value="0" id="discSlider" oninput="updateDiscLabel()">
+        <span class="disc-val" id="discLabel">0%</span>
+      </div>
+      <div class="disc-steps">
+        <span>0%</span><span>5%</span><span>10%</span><span>15%</span><span>20%</span><span>25%</span><span>30%</span>
+      </div>
+      <p class="field-note" id="disc-note">Applied to monthly subscription fees. Initiation billed at list.</p>
+    </div>
+
+  </div>
+</div>
+
+<div class="calc-btn-wrap" style="display:flex;align-items:center;gap:16px;">
+  <button class="calc-btn" onclick="calculate()">Generate Offer &rarr;</button>
+  <button id="printBtn" style="display:none;background:var(--navy);color:white;border:none;border-radius:5px;padding:16px 28px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:0.02em;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="window.print()">&#x238b;&nbsp; Print / Export PDF</button>
+</div>
+
+<div id="output"></div>
+
+<footer>
+  <span>Pricing effective April 2026 &nbsp;·&nbsp; Subject to signed agreement &nbsp;·&nbsp; migrate-bw.com</span>
+  <span>SAP BW Migrator &nbsp;·&nbsp; DataSentics a Bull company &nbsp;·&nbsp; Confidential</span>
+</footer>
+
+<script>
+  const PRICES = {
+    initFirst:      8000,
+    initAdditional: 4000,
+    demo:           1500,
+    assessment:     7000,
+    migration: { S: 15000, M: 22500, L: 30000 },
+  };
+
+  let state = {
+    account:   'Direct',
+    instances: 1,
+    size:      'S',
+    demoDur:   0,
+    assessDur: 0,
+    migDur:    0,
+    discount:  0,
+    currency:  'EUR',
+  };
+
+  function setAccount(v) {
+    state.account = v;
+    document.getElementById('btn-direct').className = 'seg-btn' + (v === 'Direct' ? ' active-direct' : '');
+    document.getElementById('btn-si').className     = 'seg-btn' + (v === 'SI'     ? ' active-si'     : '');
+    document.getElementById('account-note').textContent = v === 'SI'
+      ? 'Partner discount applied to monthly fees. Set below.'
+      : 'Standard list pricing. No partner discount applied.';
+    document.getElementById('field-demo').className     = 'field' + (v === 'SI' ? '' : ' hidden');
+    document.getElementById('field-discount').className = 'field' + (v === 'SI' ? '' : ' hidden');
+  }
+
+  function adjInstances(d) {
+    state.instances = Math.max(1, Math.min(10, state.instances + d));
+    document.getElementById('instanceVal').textContent = state.instances;
+    var sym = state.currency === 'USD' ? '$' : '\u20ac';
+    var init1 = state.currency === 'USD' ? '9,500' : '8,000';
+    var initN = state.currency === 'USD' ? '5,000' : '4,000';
+    document.getElementById('instance-note').textContent = state.instances === 1
+      ? 'Initiation: ' + sym + init1 + ' first \u00b7 ' + sym + initN + ' each additional'
+      : 'Initiation: ' + sym + init1 + ' first \u00b7 ' + sym + initN + ' \u00d7 ' + (state.instances - 1) + ' additional';
+  }
+
+  function getSizeInfo() {
+    var sym = state.currency === 'USD' ? '$' : '\u20ac';
+    return {
+      S: '1\u00d7 \u2014 ' + sym + (state.currency === 'USD' ? '18,000' : '15,000') + '/mo',
+      M: '1.5\u00d7 \u2014 ' + sym + (state.currency === 'USD' ? '27,000' : '22,500') + '/mo',
+      L: '2\u00d7 \u2014 ' + sym + (state.currency === 'USD' ? '36,000' : '30,000') + '/mo'
+    };
+  }
+  function setSize(v) {
+    state.size = v;
+    ['S','M','L'].forEach(function(k) {
+      document.getElementById('size-' + k).className = 'size-card' + (k === v ? ' active' : '');
+    });
+    document.getElementById('size-note').textContent = 'Migration multiplier: ' + getSizeInfo()[v];
+  }
+
+  function updateDemoLabel() {
+    state.demoDur = parseInt(document.getElementById('demoDur').value);
+    document.getElementById('demoLabel').textContent = state.demoDur + ' mo';
+  }
+  function updateAssessLabel() {
+    state.assessDur = parseInt(document.getElementById('assessDur').value);
+    document.getElementById('assessLabel').textContent = state.assessDur + ' mo';
+  }
+  function updateMigLabel() {
+    state.migDur = parseInt(document.getElementById('migDur').value);
+    document.getElementById('migLabel').textContent = state.migDur + ' mo';
+  }
+  function updateDiscLabel() {
+    state.discount = parseInt(document.getElementById('discSlider').value);
+    document.getElementById('discLabel').textContent = state.discount + '%';
+    document.getElementById('disc-note').textContent = state.discount === 0
+      ? 'Applied to monthly subscription fees. Initiation billed at list.'
+      : state.discount + '% off list on monthly fees. Initiation billed at list.';
+  }
+
+  function setCurrency(c) {
+    state.currency = c;
+    document.getElementById('btn-eur').className = 'cur-btn' + (c === 'EUR' ? ' active' : '');
+    document.getElementById('btn-usd').className = 'cur-btn' + (c === 'USD' ? ' active' : '');
+    document.getElementById('intro-sub').textContent =
+      c === 'EUR' ? 'V2 tier model \u00b7 All figures in EUR excl. VAT \u00b7 Monthly billing in advance'
+                  : 'V2 tier model \u00b7 All figures in USD excl. tax \u00b7 Monthly billing in advance';
+    var sym = c === 'USD' ? '$' : '\u20ac';
+    document.getElementById('demo-note').textContent =
+      (c === 'USD' ? '$2,000' : '\u20ac1,500') + '/mo \u00b7 Presales environment. Runs before Assessment.';
+    document.getElementById('assess-note').textContent =
+      (c === 'USD' ? '$8,500' : '\u20ac7,000') + '/mo \u00b7 Typical: 2\u20134 months.';
+    // Refresh size note and instance note with current selections
+    document.getElementById('size-note').textContent = 'Migration multiplier: ' + getSizeInfo()[state.size];
+    var init1 = c === 'USD' ? '9,500' : '8,000';
+    var initN = c === 'USD' ? '5,000' : '4,000';
+    document.getElementById('instance-note').textContent = state.instances === 1
+      ? 'Initiation: ' + sym + init1 + ' first \u00b7 ' + sym + initN + ' each additional'
+      : 'Initiation: ' + sym + init1 + ' first \u00b7 ' + sym + initN + ' \u00d7 ' + (state.instances - 1) + ' additional';
+  }
+
+  function toDisplay(eurVal) {
+    if (state.currency === 'USD') {
+      return Math.round(eurVal * 1.2 / 500) * 500;
+    }
+    return eurVal;
+  }
+
+  function fmt(n) {
+    var v = toDisplay(n);
+    var sym = state.currency === 'USD' ? '$' : '\u20ac';
+    return sym + Math.round(v).toLocaleString('de-DE');
+  }
+
+  function calculate() {
+    var account   = state.account;
+    var instances = state.instances;
+    var size      = state.size;
+    var demoDur   = state.demoDur;
+    var assessDur = state.assessDur;
+    var migDur    = state.migDur;
+    var discount  = state.discount;
+    var isSI      = account === 'SI';
+    var disc      = 1 - (discount / 100);
+
+    var initCost   = PRICES.initFirst + (instances - 1) * PRICES.initAdditional;
+    var demoRate   = PRICES.demo * disc;
+    var assessRate = PRICES.assessment * disc;
+    var migRate    = PRICES.migration[size] * disc;
+
+    var schedule = [];
+    var month = 0;
+
+    // Only include initiation if at least one phase is active
+    var hasAnyPhase = (isSI && demoDur > 0) || assessDur > 0 || migDur > 0;
+
+    if (isSI && demoDur > 0) {
+      month++;
+      schedule.push({ mo: month, phase: 'Demo', tag1: hasAnyPhase && month === 1, tag2: 'demo', sub: demoRate, init: (month === 1 ? initCost : 0), total: (month === 1 ? initCost : 0) + demoRate });
+      for (var i = 1; i < demoDur; i++) {
+        month++;
+        schedule.push({ mo: month, phase: 'Demo', tag1: false, tag2: 'demo', sub: demoRate, init: 0, total: demoRate });
+      }
+    }
+
+    if (assessDur > 0) {
+      for (var i = 0; i < assessDur; i++) {
+        month++;
+        var isFirst = schedule.length === 0;
+        schedule.push({ mo: month, phase: 'Assessment', tag1: isFirst, tag2: 'assess', sub: assessRate, init: (isFirst ? initCost : 0), total: (isFirst ? initCost : 0) + assessRate });
+      }
+    }
+
+    for (var i = 0; i < migDur; i++) {
+      if (schedule.length >= 36) break;
+      month++;
+      var isFirst = schedule.length === 0;
+      schedule.push({ mo: month, phase: 'Migration', tag1: isFirst, tag2: 'mig', sub: migRate, init: (isFirst ? initCost : 0), total: (isFirst ? initCost : 0) + migRate });
+    }
+
+    if (schedule.length === 0) {
+      // Nothing selected — show a placeholder
+  
+    var out = document.getElementById('output');
+      out.style.display = 'block';
+      out.innerHTML = '<div style="background:white;border:1.5px solid var(--mid);border-radius:5px;padding:32px;text-align:center;color:var(--muted);font-size:14px;">Set at least one phase duration to generate an offer.</div>';
+      document.getElementById('printBtn').style.display = 'none';
+      out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    var demoTotal   = isSI ? demoRate * demoDur : 0;
+    var assessTotal = assessRate * assessDur;
+    var migTotal    = migRate * migDur;
+    var totalCV     = initCost + demoTotal + assessTotal + migTotal;
+    var totalMonths = (isSI ? demoDur : 0) + assessDur + migDur;
+
+    var visible = schedule.slice(0, 24);
+    var hidden  = schedule.slice(24);
+
+    function rowHTML(r) {
+      var t1 = r.tag1 ? '<span class="sch-tag tag-init">Initiation</span>' : '';
+      var t2 = r.tag2 ? '<span class="sch-tag tag-' + r.tag2 + '">' + r.phase + '</span>' : '';
+      return '<div class="sch-row">'
+        + '<span class="sch-mo">Mo ' + r.mo + '</span>'
+        + '<span class="sch-desc">' + t1 + t2 + '</span>'
+        + '<span class="sch-num">' + (r.init > 0 ? fmt(r.init) : '&mdash;') + '</span>'
+        + '<span class="sch-num">' + fmt(r.sub) + '</span>'
+        + '<span class="sch-num total">' + fmt(r.total) + '</span>'
+        + '</div>';
+    }
+
+    var today    = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+    var refNum   = 'BWM-' + Date.now().toString(36).toUpperCase().slice(-6);
+    var customer = document.getElementById('customerName').value.trim() || 'Prospect';
+    var prospect = document.getElementById('prospectName').value.trim();
+    var curLabel = state.currency === 'USD' ? 'USD' : 'EUR';
+    var validUntil = new Date();
+    validUntil.setDate(validUntil.getDate() + 30);
+    var validStr = validUntil.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+
+    var discBadge = (isSI && discount > 0)
+      ? '<div class="si-badge">&#10003; ' + discount + '% SI discount applied on monthly fees</div>' : '';
+
+    var hiddenRow = hidden.length > 0
+      ? '<div class="sch-row" style="background:var(--off)">'
+          + '<span class="sch-mo" style="color:var(--muted)">&hellip;</span>'
+          + '<span class="sch-desc" style="color:var(--muted)">Months ' + (visible.length+1) + '&ndash;' + schedule.length + ' (' + hidden.length + ' further payments)</span>'
+          + '<span class="sch-num">&mdash;</span>'
+          + '<span class="sch-num" style="color:var(--muted)">' + fmt(hidden[0].sub) + '/mo</span>'
+          + '<span class="sch-num total">' + fmt(hidden.reduce(function(s,r){return s+r.total;},0)) + ' total</span>'
+          + '</div>' : '';
+
+    var phaseSummary = [];
+    if (isSI && demoDur > 0) phaseSummary.push('Demo ' + demoDur + 'mo');
+    if (assessDur > 0) phaseSummary.push('Assessment ' + assessDur + 'mo');
+    if (migDur > 0) phaseSummary.push('Migration ' + migDur + 'mo');
+
+    var html =
+      '<div class="offer-header">'
+        + '<div class="oh-left"><h2>' + customer + '</h2>'
+        + (prospect ? '<div style="font-size:13px;color:rgba(255,255,255,0.7);margin-top:2px;margin-bottom:4px;">Attn: ' + prospect + '</div>' : '')
+        + '<div class="oh-sub">' + account + ' &nbsp;&middot;&nbsp; Size ' + size + ' &nbsp;&middot;&nbsp; '
+        + instances + ' instance' + (instances > 1 ? 's' : '') + ' &nbsp;&middot;&nbsp; ' + totalMonths + ' months total &nbsp;&middot;&nbsp; ' + curLabel + '</div></div>'
+        + '<div class="oh-right"><div class="oh-date">Issued: ' + today + '</div><div class="oh-date" style="margin-top:3px;color:rgba(255,165,0,0.8);">Valid until: ' + validStr + '</div><div class="oh-ref">' + refNum + '</div></div>'
+      + '</div>'
+
+      + '<div class="invoice-band">'
+        + '<div style="flex-shrink:0"><div class="inv-label">First Invoice</div>'
+        + '<div class="inv-amount">' + fmt(schedule[0].total) + '</div>'
+        + '<div class="inv-note">Due on contract signing</div></div>'
+        + '<div class="inv-breakdown">' + discBadge
+        + '<div><strong>Initiation fee:</strong> ' + fmt(initCost)
+          + ' &nbsp;(' + (instances === 1 ? 'single instance' : fmt(PRICES.initFirst) + ' + ' + (instances-1) + '&times;' + fmt(PRICES.initAdditional)) + ')</div>'
+        + '<div><strong>Month 1 subscription:</strong> ' + fmt(schedule[0].sub) + ' &nbsp;(' + schedule[0].phase + ')</div>'
+        + (isSI && demoDur > 0 ? '<div><strong>Demo total:</strong> ' + fmt(demoTotal) + ' &nbsp;(' + fmt(demoRate) + '/mo &times; ' + demoDur + ' mo)</div>' : '')
+        + (assessDur > 0 ? '<div><strong>Assessment total:</strong> ' + fmt(assessTotal) + ' &nbsp;(' + fmt(assessRate) + '/mo &times; ' + assessDur + ' mo)</div>' : '')
+        + (migDur > 0 ? '<div><strong>Migration total:</strong> ' + fmt(migTotal) + ' &nbsp;(' + fmt(migRate) + '/mo &times; ' + migDur + ' mo)</div>' : '')
+        + '<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--mid)">'
+          + '<strong>Total contract value:</strong> ' + fmt(totalCV) + ' over ' + totalMonths + ' months</div>'
+        + '</div>'
+      + '</div>'
+
+      + '<div class="schedule-wrap">'
+        + '<div class="sch-header"><span>Month</span><span>Phase</span><span>Initiation</span><span>Subscription</span><span>Invoice Total</span></div>'
+        + visible.map(rowHTML).join('')
+        + hiddenRow
+      + '</div>'
+
+      + '<div class="terms-row">'
+        + '<div class="term"><div class="term-k">Billing</div><div class="term-v">Monthly in advance</div></div>'
+        + '<div class="term"><div class="term-k">Cancellation</div><div class="term-v">60-day notice</div></div>'
+        + '<div class="term"><div class="term-k">Contract</div><div class="term-v">Annual, auto-renew</div></div>'
+        + '<div class="term"><div class="term-k">Support</div><div class="term-v">Email + Teams / Slack</div></div>'
+      + '</div>'
+
+      + (isSI && discount > 0
+        ? '<div class="econ-band">'
+            + '<div class="econ-item"><div class="econ-k">SI Discount Applied</div>'
+              + '<div class="econ-v">' + discount + '%</div>'
+              + '<div class="econ-sub">On monthly fees. Initiation at list price.</div></div>'
+            + '<div class="econ-item"><div class="econ-k">Tooling vs. Project Value</div>'
+              + '<div class="econ-v">10&ndash;15%</div>'
+              + '<div class="econ-sub">Platform cost as % of total migration. Partner services capture the rest.</div></div>'
+          + '</div>'
+        : '');
+
+
+    // ── Build phase array for timeline ──
+    var tlPhases = [], tlCursor = 0;
+    if (isSI && demoDur > 0) { tlPhases.push({ name: 'Demo', start: tlCursor, dur: demoDur }); tlCursor += demoDur; }
+    if (assessDur > 0) { tlPhases.push({ name: 'Assessment', start: tlCursor, dur: assessDur }); tlCursor += assessDur; }
+    if (migDur > 0) { tlPhases.push({ name: 'Migration', start: tlCursor, dur: migDur }); tlCursor += migDur; }
+    html += buildTimeline(tlPhases, totalMonths);
+
+    // ── Build deal summary ──
+    var sym2 = state.currency === 'USD' ? '$' : '\u20ac';
+    function fmtS(n) { var v = state.currency === 'USD' ? Math.round(n * 1.2 / 500) * 500 : n; return sym2 + Math.round(v).toLocaleString('de-DE'); }
+    var phLines = [];
+    if (isSI && demoDur > 0) phLines.push('Demo: ' + demoDur + ' months');
+    if (assessDur > 0) phLines.push('Assessment: ' + assessDur + ' months');
+    if (migDur > 0) phLines.push('Migration: ' + migDur + ' months');
+    var cur2 = state.currency;
+    var peakSub = schedule.length > 0 ? fmtS(schedule[schedule.length-1].sub) : '\u2014';
+    var emailText = 'Subject: SAP BW Migrator \u2014 Offer for ' + customer + ' \u00b7 ' + refNum + '\n\n'
+      + 'Hi ' + (prospect || customer) + ',\n\n'
+      + 'Please find below a summary of our SAP BW Migrator offer.\n\n'
+      + 'Offer Reference: ' + refNum + '\n'
+      + 'Issued: ' + today + '  \u00b7  Valid until: ' + validStr + '\n\n'
+      + 'Scope:\n'
+      + '  \u2022 Customer: ' + customer + '\n'
+      + '  \u2022 BW Instances: ' + instances + ' (Size ' + size + ')\n'
+      + '  \u2022 Account type: ' + account + (isSI && discount > 0 ? ' \u00b7 ' + discount + '% partner discount' : '') + '\n'
+      + phLines.map(function(p){ return '  \u2022 ' + p; }).join('\n') + '\n'
+      + '  \u2022 Total duration: ' + totalMonths + ' months\n\n'
+      + 'Pricing (' + cur2 + ', excl. VAT/tax):\n'
+      + '  \u2022 Initiation fee (due on signing): ' + fmtS(initCost) + '\n'
+      + (isSI && demoDur > 0 ? '  \u2022 Demo phase total: ' + fmtS(demoTotal) + '\n' : '')
+      + (assessDur > 0 ? '  \u2022 Assessment total: ' + fmtS(assessTotal) + '\n' : '')
+      + (migDur > 0 ? '  \u2022 Migration total: ' + fmtS(migTotal) + '\n' : '')
+      + '  \u2022 Total Contract Value: ' + fmtS(totalCV) + '\n\n'
+      + 'Happy to walk through the details on a call. This offer is confidential and subject to a signed agreement.\n\nmigrate-bw.com';
+    var slackText = '*SAP BW Migrator offer ready for ' + customer + '*\n'
+      + 'Ref: `' + refNum + '` \u00b7 ' + today + '\n\n'
+      + '*Scope:* Size ' + size + ' \u00b7 ' + instances + ' instance' + (instances > 1 ? 's' : '') + ' \u00b7 ' + account + (isSI && discount > 0 ? ' -' + discount + '%' : '') + '\n'
+      + '*Phases:* ' + phLines.join(' \u2192 ') + '\n'
+      + '*Duration:* ' + totalMonths + ' months\n\n'
+      + '*TCV:* ' + fmtS(totalCV) + ' (' + cur2 + ' excl. VAT)\n'
+      + '*Initiation:* ' + fmtS(initCost) + ' on signing\n'
+      + '*Peak monthly:* ' + peakSub + '\n\n'
+      + '_Valid until ' + validStr + ' \u00b7 migrate-bw.com_';
+    html += buildSummary({ email: emailText, slack: slackText });
+
+    var out = document.getElementById('output');
+    out.style.display = 'block';
+    out.innerHTML = html;
+    if (window._lastSumId) populateSummary(window._lastSumId);
+    document.getElementById('printBtn').style.display = 'inline-block';
+    out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* ─── Timeline Visualizer ─── */
+  function buildTimeline(phases, totalMonths) {
+    var today = new Date();
+    var eom = new Date(2027, 11, 1);
+    var mToEOM = (eom.getFullYear() - today.getFullYear()) * 12 + (eom.getMonth() - today.getMonth());
+    var span = Math.max(totalMonths + 3, mToEOM + 2, 6);
+    var W = 680, H = 112, mL = 48, mR = 16, mT = 28, barH = 32, plotW = W - mL - mR;
+    function xp(m) { return mL + (m / span) * plotW; }
+    var pc = { Demo: '#1c38f5', Assessment: '#00b290', Migration: '#FF5539' };
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">';
+    s += '<rect x="' + mL + '" y="' + mT + '" width="' + plotW + '" height="' + barH + '" fill="#f5f4f1" rx="3"/>';
+    phases.forEach(function(p) {
+      var x = xp(p.start), w = Math.max(2, (p.dur / span) * plotW), c = pc[p.name] || '#999';
+      s += '<rect x="' + x.toFixed(1) + '" y="' + mT + '" width="' + w.toFixed(1) + '" height="' + barH + '" fill="' + c + '" opacity="0.85" rx="2"/>';
+      if (w > 42) s += '<text x="' + (x + w/2).toFixed(1) + '" y="' + (mT + barH/2 + 4) + '" text-anchor="middle" font-size="10" font-weight="600" fill="white" font-family="DM Sans,sans-serif">' + p.name + ' (' + p.dur + 'mo)</text>';
+      else if (w > 18) s += '<text x="' + (x + w/2).toFixed(1) + '" y="' + (mT + barH/2 + 4) + '" text-anchor="middle" font-size="9" font-weight="600" fill="white" font-family="DM Sans,sans-serif">' + p.dur + 'mo</text>';
+    });
+    s += '<line x1="' + mL + '" y1="' + (mT-8) + '" x2="' + mL + '" y2="' + (mT+barH+5) + '" stroke="#5e6880" stroke-width="1" stroke-dasharray="3,3"/>';
+    s += '<text x="' + mL + '" y="' + (mT-12) + '" text-anchor="middle" font-size="9" fill="#5e6880" font-family="DM Sans,sans-serif">Today</text>';
+    var ex = xp(mToEOM);
+    if (ex > mL + 5 && ex < W - mR) {
+      s += '<line x1="' + ex.toFixed(1) + '" y1="' + (mT-8) + '" x2="' + ex.toFixed(1) + '" y2="' + (mT+barH+5) + '" stroke="#002870" stroke-width="1.5" stroke-dasharray="4,3"/>';
+      s += '<text x="' + ex.toFixed(1) + '" y="' + (mT-12) + '" text-anchor="middle" font-size="9" font-weight="700" fill="#002870" font-family="DM Sans,sans-serif">EOM Dec \'27</text>';
+    }
+    var mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var sy = today.getFullYear(), sm = today.getMonth();
+    var step = span <= 12 ? 1 : span <= 24 ? 3 : 6;
+    for (var i = 0; i <= span; i += step) {
+      var tx = xp(i), d = new Date(sy, sm + i, 1);
+      s += '<line x1="' + tx.toFixed(1) + '" y1="' + (mT+barH) + '" x2="' + tx.toFixed(1) + '" y2="' + (mT+barH+5) + '" stroke="#e8e6e0" stroke-width="1"/>';
+      s += '<text x="' + tx.toFixed(1) + '" y="' + (mT+barH+16) + '" text-anchor="middle" font-size="9" fill="#5e6880" font-family="DM Sans,sans-serif">' + mo[d.getMonth()] + ' \'' + String(d.getFullYear()).slice(2) + '</text>';
+    }
+    s += '</svg>';
+    var margin = mToEOM - totalMonths;
+    var status = margin >= 0
+      ? '<div class="eom-status eom-ok">&#10003; Completes ' + (margin > 0 ? margin + ' months before' : 'exactly at') + ' EOM deadline</div>'
+      : '<div class="eom-status eom-warn">&#9888; Extends ' + Math.abs(margin) + ' month' + (Math.abs(margin)>1?'s':'') + ' past EOM \u2014 consider compressing scope</div>';
+    return '<div class="timeline-wrap"><div class="timeline-title">Project Timeline</div>' + s + status + '</div>';
+  }
+
+  /* ─── Deal Summary Copy ─── */
+  function buildSummary(opts) {
+    var id = 'sum_' + Date.now();
+    window._lastSumId = id;
+    window['_sumData_' + id] = opts;
+    return '<div class="summary-wrap" id="' + id + '">'
+      + '<div class="summary-header"><span class="summary-header-left">Copy Deal Summary</span>'
+      + '<button class="copy-btn" id="copybtn_' + id + '" onclick="copySummary(\'' + id + '\')">&#x2398;&nbsp;Copy</button></div>'
+      + '<div class="summary-tabs">'
+      + '<div class="sum-tab active" onclick="switchSumTab(\'' + id + '\',\'email\',this)">Email</div>'
+      + '<div class="sum-tab" onclick="switchSumTab(\'' + id + '\',\'slack\',this)">Slack / Teams</div>'
+      + '</div>'
+      + '<div class="summary-body">'
+      + '<textarea class="summary-textarea" id="email_' + id + '" readonly></textarea>'
+      + '<textarea class="summary-textarea" id="slack_' + id + '" readonly style="display:none"></textarea>'
+      + '</div></div>';
+  }
+
+  function populateSummary(id) {
+    var d = window['_sumData_' + id];
+    if (!d) return;
+    document.getElementById('email_' + id).value = d.email;
+    document.getElementById('slack_' + id).value = d.slack;
+  }
+
+  function switchSumTab(id, tab, el) {
+    document.getElementById('email_' + id).style.display = tab === 'email' ? '' : 'none';
+    document.getElementById('slack_' + id).style.display = tab === 'slack' ? '' : 'none';
+    document.getElementById(id).querySelectorAll('.sum-tab').forEach(function(t){ t.classList.remove('active'); });
+    el.classList.add('active');
+  }
+
+  function copySummary(id) {
+    var emailTA = document.getElementById('email_' + id);
+    var slackTA = document.getElementById('slack_' + id);
+    var active = slackTA.style.display === 'none' ? emailTA : slackTA;
+    var btn = document.getElementById('copybtn_' + id);
+    function confirm() { btn.innerHTML = '\u2713 Copied!'; btn.classList.add('copied'); setTimeout(function(){ btn.innerHTML = '&#x2398;&nbsp;Copy'; btn.classList.remove('copied'); }, 2000); }
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(active.value).then(confirm);
+    } else {
+      active.select(); document.execCommand('copy'); confirm();
+    }
+  }
+
+</script>
+</body>
+</html>

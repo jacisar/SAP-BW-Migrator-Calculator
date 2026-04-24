@@ -1,0 +1,1 @@
+The folder contains a sales calculator that allows quickly sampling costs and offers for prospects. Your job is to optimize the structure as well as the workflow.
