@@ -204,6 +204,14 @@
   }
   .print-btn:hover { background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.5); }
 
+  .share-btn {
+    background: transparent; color: var(--navy); border: 1.5px solid var(--navy);
+    border-radius: 5px; padding: 16px 24px; font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.02em; transition: all 0.15s;
+  }
+  .share-btn:hover { background: var(--navy); color: white; }
+  .share-btn.copied { background: var(--teal); color: white; border-color: var(--teal); }
+
   @media print {
     /* Force full-colour printing */
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -395,8 +403,9 @@
   </div>
 </div>
 
-<div class="calc-btn-wrap" style="display:flex;align-items:center;gap:16px;">
+<div class="calc-btn-wrap" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
   <button class="calc-btn" onclick="calculate()">Generate Offer &rarr;</button>
+  <button id="shareBtn" class="share-btn" onclick="saveToHash()">&#x1F517;&nbsp; Share / Save Link</button>
   <button id="printBtn" style="display:none;background:var(--navy);color:white;border:none;border-radius:5px;padding:16px 28px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:0.02em;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" onclick="window.print()">&#x238b;&nbsp; Print / Export PDF</button>
 </div>
 
@@ -797,6 +806,79 @@
     document.getElementById(id).querySelectorAll('.sum-tab').forEach(function(t){ t.classList.remove('active'); });
     el.classList.add('active');
   }
+
+  function saveToHash() {
+    var config = {
+      currency:     state.currency,
+      account:      state.account,
+      instances:    state.instances,
+      size:         state.size,
+      demoDur:      state.demoDur,
+      assessDur:    state.assessDur,
+      migDur:       state.migDur,
+      discount:     state.discount,
+      customerName: document.getElementById('customerName').value.trim(),
+      prospectName: document.getElementById('prospectName').value.trim(),
+    };
+    var encoded = btoa(unescape(encodeURIComponent(JSON.stringify(config))));
+    window.location.hash = encoded;
+    var url = window.location.href.split('#')[0] + '#' + encoded;
+    var btn = document.getElementById('shareBtn');
+    function showCopied() {
+      btn.textContent = '\u2713 Link Copied!';
+      btn.classList.add('copied');
+      setTimeout(function() { btn.innerHTML = '&#x1F517;&nbsp; Share / Save Link'; btn.classList.remove('copied'); }, 2500);
+    }
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(showCopied).catch(showCopied);
+    } else {
+      showCopied();
+    }
+  }
+
+  function loadFromHash() {
+    var hash = window.location.hash.slice(1);
+    if (!hash) return;
+    try {
+      var config = JSON.parse(decodeURIComponent(escape(atob(hash))));
+      if (config.currency) setCurrency(config.currency);
+      if (config.account)  setAccount(config.account);
+      if (config.instances) {
+        state.instances = Math.max(1, Math.min(10, parseInt(config.instances)));
+        document.getElementById('instanceVal').textContent = state.instances;
+        adjInstances(0);
+      }
+      if (config.size) setSize(config.size);
+      if (config.demoDur !== undefined) {
+        state.demoDur = parseInt(config.demoDur);
+        document.getElementById('demoDur').value = state.demoDur;
+        document.getElementById('demoLabel').textContent = state.demoDur + ' mo';
+      }
+      if (config.assessDur !== undefined) {
+        state.assessDur = parseInt(config.assessDur);
+        document.getElementById('assessDur').value = state.assessDur;
+        document.getElementById('assessLabel').textContent = state.assessDur + ' mo';
+      }
+      if (config.migDur !== undefined) {
+        state.migDur = parseInt(config.migDur);
+        document.getElementById('migDur').value = state.migDur;
+        document.getElementById('migLabel').textContent = state.migDur + ' mo';
+      }
+      if (config.discount !== undefined) {
+        state.discount = parseInt(config.discount);
+        document.getElementById('discSlider').value = state.discount;
+        document.getElementById('discLabel').textContent = state.discount + '%';
+        updateDiscLabel();
+      }
+      if (config.customerName) document.getElementById('customerName').value = config.customerName;
+      if (config.prospectName) document.getElementById('prospectName').value = config.prospectName;
+      if (state.demoDur > 0 || state.assessDur > 0 || state.migDur > 0) calculate();
+    } catch(e) {
+      // Invalid or unrecognised hash — ignore silently
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', loadFromHash);
 
   function copySummary(id) {
     var emailTA = document.getElementById('email_' + id);
