@@ -164,8 +164,14 @@
   .tag-demo   { background: #eceeff; color: var(--blue); }
   .tag-assess { background: #e6f7f3; color: var(--teal); }
   .tag-mig    { background: #fff1ee; color: var(--orange); }
+  .tag-freeze { background: #fff8e1; color: var(--yellow); }
   .sch-num { font-size: 12px; color: var(--muted); text-align: right; }
   .sch-num.total { font-size: 13px; font-weight: 700; color: var(--text); }
+  .sch-num.ps-est { font-size: 12px; color: var(--blue); text-align: right; }
+
+  /* SI mode: 6-column schedule layout */
+  .si-schedule .sch-header,
+  .si-schedule .sch-row { grid-template-columns: 60px 1fr 100px 110px 145px 110px; }
 
   .terms-row {
     background: white; border: 1.5px solid var(--mid); border-top: none;
@@ -394,6 +400,36 @@
       <p class="field-note" id="disc-note">Applied to monthly subscription fees. Initiation billed at list.</p>
     </div>
 
+    <!-- Subscription Freeze — SI only -->
+    <div class="field hidden" id="field-freeze">
+      <label>Subscription Freeze</label>
+      <div class="duration-row">
+        <input type="range" min="0" max="6" step="1" value="0" id="freezeDur" oninput="updateFreezeLabel()">
+        <span class="duration-val" id="freezeLabel">0 mo</span>
+      </div>
+      <p class="field-note">€500/mo fixed · Occurs after Assessment, before Migration starts.</p>
+    </div>
+
+    <!-- PS MD Rate — SI only -->
+    <div class="field hidden" id="field-ps-rate">
+      <label>PS Man-Day Rate</label>
+      <div class="duration-row" style="--accent: var(--blue)">
+        <input type="range" min="800" max="1000" step="50" value="900" id="psMdRate" oninput="updatePsMdRateLabel()" style="accent-color:var(--blue)">
+        <span class="duration-val" style="color:var(--blue)" id="psMdRateLabel">€900</span>
+      </div>
+      <p class="field-note">Man-day rate for Professional Services. Not affected by SI discount.</p>
+    </div>
+
+    <!-- PS FTE Capacity — SI only -->
+    <div class="field hidden" id="field-ps-fte">
+      <label>PS Monthly Capacity</label>
+      <div class="duration-row">
+        <input type="range" min="0.25" max="4" step="0.25" value="1" id="psFte" oninput="updatePsFteLabel()" style="accent-color:var(--blue)">
+        <span class="duration-val" style="color:var(--blue)" id="psFteLabel">1.0 FTE</span>
+      </div>
+      <p class="field-note">Estimated FTE engagement per month during Assessment &amp; Migration.</p>
+    </div>
+
   </div>
 </div>
 
@@ -418,6 +454,7 @@
     demo:           1500,
     assessment:     7000,
     migration: { S: 15000, M: 22500, L: 30000 },
+    freeze:         500,
   };
 
   let state = {
@@ -427,6 +464,9 @@
     demoDur:   0,
     assessDur: 0,
     migDur:    0,
+    freezeDur: 0,
+    psMdRate:  900,
+    psFte:     1.0,
     discount:  0,
     currency:  'EUR',
   };
@@ -438,8 +478,10 @@
     document.getElementById('account-note').textContent = v === 'SI'
       ? 'Partner discount applied to monthly fees. Set below.'
       : 'Standard list pricing. No partner discount applied.';
-    document.getElementById('field-demo').className     = 'field' + (v === 'SI' ? '' : ' hidden');
-    document.getElementById('field-discount').className = 'field' + (v === 'SI' ? '' : ' hidden');
+    var siFields = ['field-demo', 'field-discount', 'field-freeze', 'field-ps-rate', 'field-ps-fte'];
+    siFields.forEach(function(id) {
+      document.getElementById(id).className = 'field' + (v === 'SI' ? '' : ' hidden');
+    });
   }
 
   function adjInstances(d) {
@@ -488,6 +530,19 @@
       ? 'Applied to monthly subscription fees. Initiation billed at list.'
       : state.discount + '% off list on monthly fees. Initiation billed at list.';
   }
+  function updateFreezeLabel() {
+    state.freezeDur = parseInt(document.getElementById('freezeDur').value);
+    document.getElementById('freezeLabel').textContent = state.freezeDur + ' mo';
+  }
+  function updatePsMdRateLabel() {
+    state.psMdRate = parseInt(document.getElementById('psMdRate').value);
+    var sym = state.currency === 'USD' ? '$' : '€';
+    document.getElementById('psMdRateLabel').textContent = sym + state.psMdRate;
+  }
+  function updatePsFteLabel() {
+    state.psFte = parseFloat(document.getElementById('psFte').value);
+    document.getElementById('psFteLabel').textContent = state.psFte.toFixed(2).replace(/\.?0+$/, '') + ' FTE';
+  }
 
   function setCurrency(c) {
     state.currency = c;
@@ -530,6 +585,9 @@
     var demoDur   = state.demoDur;
     var assessDur = state.assessDur;
     var migDur    = state.migDur;
+    var freezeDur = state.freezeDur;
+    var psMdRate  = state.psMdRate;
+    var psFte     = state.psFte;
     var discount  = state.discount;
     var isSI      = account === 'SI';
     var disc      = 1 - (discount / 100);
@@ -538,19 +596,20 @@
     var demoRate   = PRICES.demo * disc;
     var assessRate = PRICES.assessment * disc;
     var migRate    = PRICES.migration[size] * disc;
+    var freezeRate = PRICES.freeze; // fixed, no discount
+    var psMonthly  = isSI ? psMdRate * 20 * psFte : 0; // not discounted
 
     var schedule = [];
     var month = 0;
 
-    // Only include initiation if at least one phase is active
-    var hasAnyPhase = (isSI && demoDur > 0) || assessDur > 0 || migDur > 0;
+    var hasAnyPhase = (isSI && demoDur > 0) || assessDur > 0 || (isSI && freezeDur > 0) || migDur > 0;
 
     if (isSI && demoDur > 0) {
       month++;
-      schedule.push({ mo: month, phase: 'Demo', tag1: hasAnyPhase && month === 1, tag2: 'demo', sub: demoRate, init: (month === 1 ? initCost : 0), total: (month === 1 ? initCost : 0) + demoRate });
+      schedule.push({ mo: month, phase: 'Demo', tag1: hasAnyPhase && month === 1, tag2: 'demo', sub: demoRate, init: (month === 1 ? initCost : 0), ps: 0, total: (month === 1 ? initCost : 0) + demoRate });
       for (var i = 1; i < demoDur; i++) {
         month++;
-        schedule.push({ mo: month, phase: 'Demo', tag1: false, tag2: 'demo', sub: demoRate, init: 0, total: demoRate });
+        schedule.push({ mo: month, phase: 'Demo', tag1: false, tag2: 'demo', sub: demoRate, init: 0, ps: 0, total: demoRate });
       }
     }
 
@@ -558,7 +617,15 @@
       for (var i = 0; i < assessDur; i++) {
         month++;
         var isFirst = schedule.length === 0;
-        schedule.push({ mo: month, phase: 'Assessment', tag1: isFirst, tag2: 'assess', sub: assessRate, init: (isFirst ? initCost : 0), total: (isFirst ? initCost : 0) + assessRate });
+        schedule.push({ mo: month, phase: 'Assessment', tag1: isFirst, tag2: 'assess', sub: assessRate, init: (isFirst ? initCost : 0), ps: psMonthly, total: (isFirst ? initCost : 0) + assessRate });
+      }
+    }
+
+    if (isSI && freezeDur > 0) {
+      for (var i = 0; i < freezeDur; i++) {
+        month++;
+        var isFirst = schedule.length === 0;
+        schedule.push({ mo: month, phase: 'Freeze', tag1: isFirst, tag2: 'freeze', sub: freezeRate, init: (isFirst ? initCost : 0), ps: 0, total: (isFirst ? initCost : 0) + freezeRate });
       }
     }
 
@@ -566,13 +633,11 @@
       if (schedule.length >= 36) break;
       month++;
       var isFirst = schedule.length === 0;
-      schedule.push({ mo: month, phase: 'Migration', tag1: isFirst, tag2: 'mig', sub: migRate, init: (isFirst ? initCost : 0), total: (isFirst ? initCost : 0) + migRate });
+      schedule.push({ mo: month, phase: 'Migration', tag1: isFirst, tag2: 'mig', sub: migRate, init: (isFirst ? initCost : 0), ps: psMonthly, total: (isFirst ? initCost : 0) + migRate });
     }
 
     if (schedule.length === 0) {
-      // Nothing selected — show a placeholder
-  
-    var out = document.getElementById('output');
+      var out = document.getElementById('output');
       out.style.display = 'block';
       out.innerHTML = '<div style="background:white;border:1.5px solid var(--mid);border-radius:5px;padding:32px;text-align:center;color:var(--muted);font-size:14px;">Set at least one phase duration to generate an offer.</div>';
       document.getElementById('printBtn').classList.add('hidden');
@@ -582,9 +647,11 @@
 
     var demoTotal   = isSI ? demoRate * demoDur : 0;
     var assessTotal = assessRate * assessDur;
+    var freezeTotal = isSI ? freezeRate * freezeDur : 0;
     var migTotal    = migRate * migDur;
-    var totalCV     = initCost + demoTotal + assessTotal + migTotal;
-    var totalMonths = (isSI ? demoDur : 0) + assessDur + migDur;
+    var totalCV     = initCost + demoTotal + assessTotal + freezeTotal + migTotal;
+    var totalMonths = (isSI ? demoDur + freezeDur : 0) + assessDur + migDur;
+    var psTotal     = isSI ? psMonthly * (assessDur + migDur) : 0;
 
     var visible = schedule.slice(0, 24);
     var hidden  = schedule.slice(24);
@@ -592,11 +659,15 @@
     function rowHTML(r) {
       var t1 = r.tag1 ? '<span class="sch-tag tag-init">Initiation</span>' : '';
       var t2 = r.tag2 ? '<span class="sch-tag tag-' + r.tag2 + '">' + r.phase + '</span>' : '';
+      var psCell = isSI
+        ? '<span class="sch-num ps-est">' + (r.ps > 0 ? '~' + fmt(r.ps) : '&mdash;') + '</span>'
+        : '';
       return '<div class="sch-row">'
         + '<span class="sch-mo">Mo ' + r.mo + '</span>'
         + '<span class="sch-desc">' + t1 + t2 + '</span>'
         + '<span class="sch-num">' + (r.init > 0 ? fmt(r.init) : '&mdash;') + '</span>'
         + '<span class="sch-num">' + fmt(r.sub) + '</span>'
+        + psCell
         + '<span class="sch-num total">' + fmt(r.total) + '</span>'
         + '</div>';
     }
@@ -613,18 +684,25 @@
     var discBadge = (isSI && discount > 0)
       ? '<div class="si-badge">&#10003; ' + discount + '% SI discount applied on monthly fees</div>' : '';
 
+    var schWrapClass = 'schedule-wrap' + (isSI ? ' si-schedule' : '');
+    var schHeaderCols = isSI
+      ? '<span>Month</span><span>Phase</span><span>Initiation</span><span>Subscription</span><span>Est. PS Costs</span><span>Invoice Total</span>'
+      : '<span>Month</span><span>Phase</span><span>Initiation</span><span>Subscription</span><span>Invoice Total</span>';
+
     var hiddenRow = hidden.length > 0
       ? '<div class="sch-row" style="background:var(--off)">'
           + '<span class="sch-mo" style="color:var(--muted)">&hellip;</span>'
           + '<span class="sch-desc" style="color:var(--muted)">Months ' + (visible.length+1) + '&ndash;' + schedule.length + ' (' + hidden.length + ' further payments)</span>'
           + '<span class="sch-num">&mdash;</span>'
           + '<span class="sch-num" style="color:var(--muted)">' + fmt(hidden[0].sub) + '/mo</span>'
+          + (isSI ? '<span class="sch-num ps-est">&mdash;</span>' : '')
           + '<span class="sch-num total">' + fmt(hidden.reduce(function(s,r){return s+r.total;},0)) + ' total</span>'
           + '</div>' : '';
 
     var phaseSummary = [];
     if (isSI && demoDur > 0) phaseSummary.push('Demo ' + demoDur + 'mo');
     if (assessDur > 0) phaseSummary.push('Assessment ' + assessDur + 'mo');
+    if (isSI && freezeDur > 0) phaseSummary.push('Freeze ' + freezeDur + 'mo');
     if (migDur > 0) phaseSummary.push('Migration ' + migDur + 'mo');
 
     var html =
@@ -646,14 +724,16 @@
         + '<div><strong>Month 1 subscription:</strong> ' + fmt(schedule[0].sub) + ' &nbsp;(' + schedule[0].phase + ')</div>'
         + (isSI && demoDur > 0 ? '<div><strong>Demo total:</strong> ' + fmt(demoTotal) + ' &nbsp;(' + fmt(demoRate) + '/mo &times; ' + demoDur + ' mo)</div>' : '')
         + (assessDur > 0 ? '<div><strong>Assessment total:</strong> ' + fmt(assessTotal) + ' &nbsp;(' + fmt(assessRate) + '/mo &times; ' + assessDur + ' mo)</div>' : '')
+        + (isSI && freezeDur > 0 ? '<div><strong>Freeze total:</strong> ' + fmt(freezeTotal) + ' &nbsp;(' + fmt(freezeRate) + '/mo fixed &times; ' + freezeDur + ' mo)</div>' : '')
         + (migDur > 0 ? '<div><strong>Migration total:</strong> ' + fmt(migTotal) + ' &nbsp;(' + fmt(migRate) + '/mo &times; ' + migDur + ' mo)</div>' : '')
         + '<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--mid)">'
-          + '<strong>Total contract value:</strong> ' + fmt(totalCV) + ' over ' + totalMonths + ' months</div>'
+          + '<strong>Total contract value (BW Migrator):</strong> ' + fmt(totalCV) + ' over ' + totalMonths + ' months</div>'
+        + (isSI && psTotal > 0 ? '<div style="margin-top:3px;color:var(--blue)"><strong>Est. PS costs (SI services):</strong> ~' + fmt(psTotal) + ' &nbsp;(' + fmt(psMonthly) + '/mo &times; ' + (assessDur + migDur) + ' mo &nbsp;&middot;&nbsp; not in TCV)</div>' : '')
         + '</div>'
       + '</div>'
 
-      + '<div class="schedule-wrap">'
-        + '<div class="sch-header"><span>Month</span><span>Phase</span><span>Initiation</span><span>Subscription</span><span>Invoice Total</span></div>'
+      + '<div class="' + schWrapClass + '">'
+        + '<div class="sch-header">' + schHeaderCols + '</div>'
         + visible.map(rowHTML).join('')
         + hiddenRow
       + '</div>'
@@ -665,14 +745,17 @@
         + '<div class="term"><div class="term-k">Support</div><div class="term-v">Email + Teams / Slack</div></div>'
       + '</div>'
 
-      + (isSI && discount > 0
+      + (isSI
         ? '<div class="econ-band">'
-            + '<div class="econ-item"><div class="econ-k">SI Discount Applied</div>'
+            + (discount > 0 ? '<div class="econ-item"><div class="econ-k">SI Discount Applied</div>'
               + '<div class="econ-v">' + discount + '%</div>'
-              + '<div class="econ-sub">On monthly fees. Initiation at list price.</div></div>'
+              + '<div class="econ-sub">On monthly fees. Initiation at list price.</div></div>' : '')
+            + (psTotal > 0 ? '<div class="econ-item"><div class="econ-k">Est. PS Total</div>'
+              + '<div class="econ-v" style="color:var(--yellow)">~' + fmt(psTotal) + '</div>'
+              + '<div class="econ-sub">' + fmt(psMdRate) + '/MD &times; 20 days &times; ' + psFte + ' FTE &times; ' + (assessDur + migDur) + ' mo</div></div>' : '')
             + '<div class="econ-item"><div class="econ-k">Tooling vs. Project Value</div>'
               + '<div class="econ-v">10&ndash;15%</div>'
-              + '<div class="econ-sub">Platform cost as % of total migration. Partner services capture the rest.</div></div>'
+              + '<div class="econ-sub">Platform cost as % of total migration.</div></div>'
           + '</div>'
         : '');
 
@@ -681,6 +764,7 @@
     var tlPhases = [], tlCursor = 0;
     if (isSI && demoDur > 0) { tlPhases.push({ name: 'Demo', start: tlCursor, dur: demoDur }); tlCursor += demoDur; }
     if (assessDur > 0) { tlPhases.push({ name: 'Assessment', start: tlCursor, dur: assessDur }); tlCursor += assessDur; }
+    if (isSI && freezeDur > 0) { tlPhases.push({ name: 'Freeze', start: tlCursor, dur: freezeDur }); tlCursor += freezeDur; }
     if (migDur > 0) { tlPhases.push({ name: 'Migration', start: tlCursor, dur: migDur }); tlCursor += migDur; }
     html += buildTimeline(tlPhases, totalMonths);
 
@@ -738,7 +822,7 @@
     var span = Math.max(totalMonths + 3, mToEOM + 2, 6);
     var W = 680, H = 112, mL = 48, mR = 16, mT = 28, barH = 32, plotW = W - mL - mR;
     function xp(m) { return mL + (m / span) * plotW; }
-    var pc = { Demo: '#1c38f5', Assessment: '#00b290', Migration: '#FF5539' };
+    var pc = { Demo: '#1c38f5', Assessment: '#00b290', Freeze: '#ffb600', Migration: '#FF5539' };
     var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">';
     s += '<rect x="' + mL + '" y="' + mT + '" width="' + plotW + '" height="' + barH + '" fill="#f5f4f1" rx="3"/>';
     phases.forEach(function(p) {
@@ -818,6 +902,15 @@
     state.migDur = 0;
     document.getElementById('migDur').value = 0;
     document.getElementById('migLabel').textContent = '0 mo';
+    state.freezeDur = 0;
+    document.getElementById('freezeDur').value = 0;
+    document.getElementById('freezeLabel').textContent = '0 mo';
+    state.psMdRate = 900;
+    document.getElementById('psMdRate').value = 900;
+    document.getElementById('psMdRateLabel').textContent = '€900';
+    state.psFte = 1.0;
+    document.getElementById('psFte').value = 1;
+    document.getElementById('psFteLabel').textContent = '1 FTE';
     state.discount = 0;
     document.getElementById('discSlider').value = 0;
     document.getElementById('discLabel').textContent = '0%';
@@ -839,6 +932,9 @@
       demoDur:      state.demoDur,
       assessDur:    state.assessDur,
       migDur:       state.migDur,
+      freezeDur:    state.freezeDur,
+      psMdRate:     state.psMdRate,
+      psFte:        state.psFte,
       discount:     state.discount,
       customerName: document.getElementById('customerName').value.trim(),
       prospectName: document.getElementById('prospectName').value.trim(),
@@ -886,6 +982,21 @@
         state.migDur = parseInt(config.migDur);
         document.getElementById('migDur').value = state.migDur;
         document.getElementById('migLabel').textContent = state.migDur + ' mo';
+      }
+      if (config.freezeDur !== undefined) {
+        state.freezeDur = parseInt(config.freezeDur);
+        document.getElementById('freezeDur').value = state.freezeDur;
+        document.getElementById('freezeLabel').textContent = state.freezeDur + ' mo';
+      }
+      if (config.psMdRate !== undefined) {
+        state.psMdRate = parseInt(config.psMdRate);
+        document.getElementById('psMdRate').value = state.psMdRate;
+        document.getElementById('psMdRateLabel').textContent = '€' + state.psMdRate;
+      }
+      if (config.psFte !== undefined) {
+        state.psFte = parseFloat(config.psFte);
+        document.getElementById('psFte').value = state.psFte;
+        document.getElementById('psFteLabel').textContent = state.psFte + ' FTE';
       }
       if (config.discount !== undefined) {
         state.discount = parseInt(config.discount);
