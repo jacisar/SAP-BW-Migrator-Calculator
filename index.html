@@ -789,7 +789,6 @@
         + (migDur > 0 ? '<div><strong>Migration total:</strong> ' + fmt(migTotal) + ' &nbsp;(' + fmt(migRate) + '/mo &times; ' + migDur + ' mo)</div>' : '')
         + '<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--mid)">'
           + '<strong>Total contract value (BW Migrator):</strong> ' + fmt(totalCV) + ' over ' + totalMonths + ' months</div>'
-        + (isSI && psTotal > 0 ? '<div style="margin-top:3px;color:var(--blue)"><strong>Est. PS costs (SI services):</strong> ~' + fmt(psTotal) + ' &nbsp;(' + fmt(psMonthly) + '/mo &middot; ' + psFte + ' FTE (' + Math.round(psFte * 100) + '%) &middot; incl. 8h PS Advisory/mo)</div>' : '')
         + '</div>'
       + '</div>'
 
