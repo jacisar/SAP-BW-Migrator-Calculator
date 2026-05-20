@@ -175,13 +175,23 @@
 
   .terms-row {
     background: white; border: 1.5px solid var(--mid); border-top: none;
-    border-radius: 0 0 5px 5px; display: grid; grid-template-columns: repeat(4,1fr);
+    border-radius: 0 0 5px 5px; display: grid; grid-template-columns: repeat(5,1fr);
     margin-top: 16px; overflow: hidden;
   }
-  .term { padding: 16px 20px; border-right: 1px solid var(--mid); }
+  .term { padding: 14px 16px; border-right: 1px solid var(--mid); }
   .term:last-child { border-right: none; }
   .term-k { font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
-  .term-v { font-size: 13px; font-weight: 600; color: var(--text); }
+  .term-v { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.4; }
+  .term-sub { font-size: 10px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+
+  /* Start month selector */
+  .month-seg { display: flex; gap: 6px; }
+  .month-btn {
+    flex: 1; padding: 9px 6px; border: 1.5px solid var(--mid); border-radius: 4px;
+    background: var(--off); font-family: inherit; font-size: 11px; font-weight: 500;
+    color: var(--muted); cursor: pointer; transition: all 0.15s; text-align: center;
+  }
+  .month-btn.active { border-color: var(--navy); background: var(--navy); color: white; }
 
   .econ-band {
     margin-top: 16px; background: var(--navy); border-radius: 5px;
@@ -255,6 +265,8 @@
     .sch-header, .sch-row { grid-template-columns: 48px 1fr 90px; }
     .sch-header span:nth-child(n+4), .sch-row *:nth-child(n+4) { display: none; }
     .terms-row { grid-template-columns: 1fr 1fr; }
+    .terms-row .term:nth-child(2n) { border-right: none; }
+    .terms-row .term:nth-child(n+3) { border-top: 1px solid var(--mid); }
     .econ-band { flex-direction: column; gap: 16px; }
   }
 
@@ -317,6 +329,15 @@
     <div class="field">
       <label>Prospect Name</label>
       <input type="text" id="prospectName" placeholder="e.g. Jane Smith" />
+    </div>
+
+    <!-- Project start month -->
+    <div class="field">
+      <label>Project Start Month</label>
+      <div class="month-seg" id="startMonthSeg">
+        <!-- populated by JS -->
+      </div>
+      <p class="field-note" id="startMonthNote">Affects timeline and schedule start date.</p>
     </div>
 
     <!-- Account type -->
@@ -414,7 +435,7 @@
     <div class="field hidden" id="field-ps-rate">
       <label>PS Man-Day Rate</label>
       <div class="duration-row" style="--accent: var(--blue)">
-        <input type="range" min="800" max="1000" step="50" value="900" id="psMdRate" oninput="updatePsMdRateLabel()" style="accent-color:var(--blue)">
+        <input type="range" min="800" max="1000" step="20" value="900" id="psMdRate" oninput="updatePsMdRateLabel()" style="accent-color:var(--blue)">
         <span class="duration-val" style="color:var(--blue)" id="psMdRateLabel">€900</span>
       </div>
       <p class="field-note">Man-day rate for Professional Services. Not affected by SI discount.</p>
@@ -458,18 +479,48 @@
   };
 
   let state = {
-    account:   'Direct',
-    instances: 1,
-    size:      'S',
-    demoDur:   0,
-    assessDur: 0,
-    migDur:    0,
-    freezeDur: 0,
-    psMdRate:  900,
-    psFte:     1.0,
-    discount:  0,
-    currency:  'EUR',
+    account:          'Direct',
+    instances:        1,
+    size:             'S',
+    demoDur:          0,
+    assessDur:        0,
+    migDur:           0,
+    freezeDur:        0,
+    psMdRate:         900,
+    psFte:            1.0,
+    discount:         0,
+    currency:         'EUR',
+    startMonthOffset: 0,
   };
+
+  var MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function initStartMonthButtons() {
+    var seg = document.getElementById('startMonthSeg');
+    var now = new Date();
+    seg.innerHTML = '';
+    for (var i = 0; i < 3; i++) {
+      var d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      var label = MONTH_NAMES[d.getMonth()] + ' \'' + String(d.getFullYear()).slice(2);
+      var btn = document.createElement('button');
+      btn.className = 'month-btn' + (i === state.startMonthOffset ? ' active' : '');
+      btn.textContent = label;
+      btn.dataset.offset = i;
+      btn.onclick = (function(offset) { return function() { setStartMonth(offset); }; })(i);
+      seg.appendChild(btn);
+    }
+  }
+
+  function setStartMonth(offset) {
+    state.startMonthOffset = offset;
+    document.querySelectorAll('#startMonthSeg .month-btn').forEach(function(btn) {
+      btn.className = 'month-btn' + (parseInt(btn.dataset.offset) === offset ? ' active' : '');
+    });
+    var now = new Date();
+    var d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    document.getElementById('startMonthNote').textContent =
+      'Project starts ' + MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear() + '. Affects timeline.';
+  }
 
   function setAccount(v) {
     state.account = v;
@@ -740,9 +791,10 @@
 
       + '<div class="terms-row">'
         + '<div class="term"><div class="term-k">Billing</div><div class="term-v">Monthly in advance</div></div>'
-        + '<div class="term"><div class="term-k">Cancellation</div><div class="term-v">60-day notice</div></div>'
+        + '<div class="term"><div class="term-k">Termination</div><div class="term-v">60-day written notice</div><div class="term-sub">Either party; applies to full subscription</div></div>'
+        + '<div class="term"><div class="term-k">Subscription Downgrade</div><div class="term-v">30-day notice</div><div class="term-sub">Tier or instance count reductions</div></div>'
         + '<div class="term"><div class="term-k">Contract</div><div class="term-v">Annual, auto-renew</div></div>'
-        + '<div class="term"><div class="term-k">Support</div><div class="term-v">Email + Teams / Slack</div></div>'
+        + '<div class="term"><div class="term-k">Support</div><div class="term-v">Slack &amp; Email</div><div class="term-sub">Business hours · Standard SLA<br>+ 8h PS Advisory/mo included</div></div>'
       + '</div>'
 
       + (isSI
@@ -761,12 +813,14 @@
 
 
     // ── Build phase array for timeline ──
+    var now = new Date();
+    var startDate = new Date(now.getFullYear(), now.getMonth() + state.startMonthOffset, 1);
     var tlPhases = [], tlCursor = 0;
     if (isSI && demoDur > 0) { tlPhases.push({ name: 'Demo', start: tlCursor, dur: demoDur }); tlCursor += demoDur; }
     if (assessDur > 0) { tlPhases.push({ name: 'Assessment', start: tlCursor, dur: assessDur }); tlCursor += assessDur; }
     if (isSI && freezeDur > 0) { tlPhases.push({ name: 'Freeze', start: tlCursor, dur: freezeDur }); tlCursor += freezeDur; }
     if (migDur > 0) { tlPhases.push({ name: 'Migration', start: tlCursor, dur: migDur }); tlCursor += migDur; }
-    html += buildTimeline(tlPhases, totalMonths);
+    html += buildTimeline(tlPhases, totalMonths, startDate);
 
     // ── Build deal summary ──
     var sym2 = state.currency === 'USD' ? '$' : '\u20ac';
@@ -815,10 +869,10 @@
   }
 
   /* ─── Timeline Visualizer ─── */
-  function buildTimeline(phases, totalMonths) {
-    var today = new Date();
+  function buildTimeline(phases, totalMonths, startDate) {
+    var sd = startDate || new Date();
     var eom = new Date(2027, 11, 1);
-    var mToEOM = (eom.getFullYear() - today.getFullYear()) * 12 + (eom.getMonth() - today.getMonth());
+    var mToEOM = (eom.getFullYear() - sd.getFullYear()) * 12 + (eom.getMonth() - sd.getMonth());
     var span = Math.max(totalMonths + 3, mToEOM + 2, 6);
     var W = 680, H = 112, mL = 48, mR = 16, mT = 28, barH = 32, plotW = W - mL - mR;
     function xp(m) { return mL + (m / span) * plotW; }
@@ -831,27 +885,26 @@
       if (w > 42) s += '<text x="' + (x + w/2).toFixed(1) + '" y="' + (mT + barH/2 + 4) + '" text-anchor="middle" font-size="10" font-weight="600" fill="white" font-family="DM Sans,sans-serif">' + p.name + ' (' + p.dur + 'mo)</text>';
       else if (w > 18) s += '<text x="' + (x + w/2).toFixed(1) + '" y="' + (mT + barH/2 + 4) + '" text-anchor="middle" font-size="9" font-weight="600" fill="white" font-family="DM Sans,sans-serif">' + p.dur + 'mo</text>';
     });
+    var startLabel = MONTH_NAMES[sd.getMonth()] + ' \'' + String(sd.getFullYear()).slice(2);
     s += '<line x1="' + mL + '" y1="' + (mT-8) + '" x2="' + mL + '" y2="' + (mT+barH+5) + '" stroke="#5e6880" stroke-width="1" stroke-dasharray="3,3"/>';
-    s += '<text x="' + mL + '" y="' + (mT-12) + '" text-anchor="middle" font-size="9" fill="#5e6880" font-family="DM Sans,sans-serif">Today</text>';
+    s += '<text x="' + mL + '" y="' + (mT-12) + '" text-anchor="middle" font-size="9" fill="#5e6880" font-family="DM Sans,sans-serif">' + startLabel + '</text>';
     var ex = xp(mToEOM);
     if (ex > mL + 5 && ex < W - mR) {
       s += '<line x1="' + ex.toFixed(1) + '" y1="' + (mT-8) + '" x2="' + ex.toFixed(1) + '" y2="' + (mT+barH+5) + '" stroke="#002870" stroke-width="1.5" stroke-dasharray="4,3"/>';
       s += '<text x="' + ex.toFixed(1) + '" y="' + (mT-12) + '" text-anchor="middle" font-size="9" font-weight="700" fill="#002870" font-family="DM Sans,sans-serif">EOM Dec \'27</text>';
     }
-    var mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    var sy = today.getFullYear(), sm = today.getMonth();
     var step = span <= 12 ? 1 : span <= 24 ? 3 : 6;
     for (var i = 0; i <= span; i += step) {
-      var tx = xp(i), d = new Date(sy, sm + i, 1);
+      var tx = xp(i), d = new Date(sd.getFullYear(), sd.getMonth() + i, 1);
       s += '<line x1="' + tx.toFixed(1) + '" y1="' + (mT+barH) + '" x2="' + tx.toFixed(1) + '" y2="' + (mT+barH+5) + '" stroke="#e8e6e0" stroke-width="1"/>';
-      s += '<text x="' + tx.toFixed(1) + '" y="' + (mT+barH+16) + '" text-anchor="middle" font-size="9" fill="#5e6880" font-family="DM Sans,sans-serif">' + mo[d.getMonth()] + ' \'' + String(d.getFullYear()).slice(2) + '</text>';
+      s += '<text x="' + tx.toFixed(1) + '" y="' + (mT+barH+16) + '" text-anchor="middle" font-size="9" fill="#5e6880" font-family="DM Sans,sans-serif">' + MONTH_NAMES[d.getMonth()] + ' \'' + String(d.getFullYear()).slice(2) + '</text>';
     }
     s += '</svg>';
     var margin = mToEOM - totalMonths;
     var status = margin >= 0
       ? '<div class="eom-status eom-ok">&#10003; Completes ' + (margin > 0 ? margin + ' months before' : 'exactly at') + ' EOM deadline</div>'
       : '<div class="eom-status eom-warn">&#9888; Extends ' + Math.abs(margin) + ' month' + (Math.abs(margin)>1?'s':'') + ' past EOM \u2014 consider compressing scope</div>';
-    return '<div class="timeline-wrap"><div class="timeline-title">Project Timeline</div>' + s + status + '</div>';
+    return '<div class="timeline-wrap"><div class="timeline-title">Project Timeline &nbsp;&middot;&nbsp; Starting ' + startLabel + '</div>' + s + status + '</div>';
   }
 
   /* ─── Deal Summary Copy ─── */
@@ -915,6 +968,7 @@
     document.getElementById('discSlider').value = 0;
     document.getElementById('discLabel').textContent = '0%';
     updateDiscLabel();
+    setStartMonth(0);
     document.getElementById('customerName').value = '';
     document.getElementById('prospectName').value = '';
     document.getElementById('output').style.display = 'none';
@@ -932,10 +986,11 @@
       demoDur:      state.demoDur,
       assessDur:    state.assessDur,
       migDur:       state.migDur,
-      freezeDur:    state.freezeDur,
-      psMdRate:     state.psMdRate,
-      psFte:        state.psFte,
-      discount:     state.discount,
+      freezeDur:        state.freezeDur,
+      psMdRate:         state.psMdRate,
+      psFte:            state.psFte,
+      discount:         state.discount,
+      startMonthOffset: state.startMonthOffset,
       customerName: document.getElementById('customerName').value.trim(),
       prospectName: document.getElementById('prospectName').value.trim(),
     };
@@ -1004,6 +1059,7 @@
         document.getElementById('discLabel').textContent = state.discount + '%';
         updateDiscLabel();
       }
+      if (config.startMonthOffset !== undefined) setStartMonth(parseInt(config.startMonthOffset));
       if (config.customerName) document.getElementById('customerName').value = config.customerName;
       if (config.prospectName) document.getElementById('prospectName').value = config.prospectName;
       if (state.demoDur > 0 || state.assessDur > 0 || state.migDur > 0) calculate();
@@ -1012,7 +1068,10 @@
     }
   }
 
-  window.addEventListener('DOMContentLoaded', loadFromHash);
+  window.addEventListener('DOMContentLoaded', function() {
+    initStartMonthButtons();
+    loadFromHash();
+  });
 
   function copySummary(id) {
     var emailTA = document.getElementById('email_' + id);
