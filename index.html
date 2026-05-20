@@ -175,7 +175,7 @@
 
   .terms-row {
     background: white; border: 1.5px solid var(--mid); border-top: none;
-    border-radius: 0 0 5px 5px; display: grid; grid-template-columns: repeat(5,1fr);
+    border-radius: 0 0 5px 5px; display: grid; grid-template-columns: repeat(4,1fr);
     margin-top: 16px; overflow: hidden;
   }
   .term { padding: 14px 16px; border-right: 1px solid var(--mid); }
@@ -249,8 +249,18 @@
     .sch-row      { padding: 10px 24px; }
     .sch-header   { padding: 8px 24px; }
     .offer-header { padding: 18px 24px; }
-    .econ-band    { padding: 14px 20px; margin-top: 10px; }
+    .econ-band    { padding: 14px 20px; margin-top: 0; border-radius: 0; }
     .terms-row .term { padding: 12px 16px; }
+
+    /* Fix column alignment in print */
+    .sch-header, .sch-row {
+      grid-template-columns: 52px 1fr 108px 108px 108px;
+    }
+    .si-schedule .sch-header,
+    .si-schedule .sch-row {
+      grid-template-columns: 52px 1fr 96px 104px 128px 104px;
+    }
+    .sch-num, .sch-num.total, .sch-num.ps-est { text-align: right; }
   }
 
   footer {
@@ -779,9 +789,21 @@
         + (migDur > 0 ? '<div><strong>Migration total:</strong> ' + fmt(migTotal) + ' &nbsp;(' + fmt(migRate) + '/mo &times; ' + migDur + ' mo)</div>' : '')
         + '<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--mid)">'
           + '<strong>Total contract value (BW Migrator):</strong> ' + fmt(totalCV) + ' over ' + totalMonths + ' months</div>'
-        + (isSI && psTotal > 0 ? '<div style="margin-top:3px;color:var(--blue)"><strong>Est. PS costs (SI services):</strong> ~' + fmt(psTotal) + ' &nbsp;(' + fmt(psMonthly) + '/mo &times; ' + (assessDur + migDur) + ' mo &nbsp;&middot;&nbsp; not in TCV)</div>' : '')
+        + (isSI && psTotal > 0 ? '<div style="margin-top:3px;color:var(--blue)"><strong>Est. PS costs (SI services):</strong> ~' + fmt(psTotal) + ' &nbsp;(' + fmt(psMonthly) + '/mo &middot; ' + psFte + ' FTE (' + Math.round(psFte * 100) + '%) &middot; incl. 8h PS Advisory/mo)</div>' : '')
         + '</div>'
       + '</div>'
+
+      + (isSI ? '<div class="econ-band" style="border-radius:0;margin-top:0">'
+          + '<div class="econ-item"><div class="econ-k">Est. Licence Costs (TCV)</div>'
+            + '<div class="econ-v">' + fmt(totalCV) + '</div>'
+            + '<div class="econ-sub">BW Migrator fees over ' + totalMonths + ' months</div></div>'
+          + (psTotal > 0 ? '<div class="econ-item"><div class="econ-k">Est. PS Costs</div>'
+            + '<div class="econ-v" style="color:var(--yellow)">~' + fmt(psTotal) + '</div>'
+            + '<div class="econ-sub">' + fmt(psMdRate) + '/MD &middot; ' + psFte + ' FTE (' + Math.round(psFte * 100) + '%) &middot; ' + (assessDur + migDur) + ' mo<br>Incl. 8h PS Advisory/mo per subscription</div></div>' : '')
+          + (discount > 0 ? '<div class="econ-item"><div class="econ-k">SI Discount Applied</div>'
+            + '<div class="econ-v">' + discount + '%</div>'
+            + '<div class="econ-sub">On monthly fees. Initiation at list price.</div></div>' : '')
+        + '</div>' : '')
 
       + '<div class="' + schWrapClass + '">'
         + '<div class="sch-header">' + schHeaderCols + '</div>'
@@ -793,23 +815,8 @@
         + '<div class="term"><div class="term-k">Billing</div><div class="term-v">Monthly in advance</div></div>'
         + '<div class="term"><div class="term-k">Termination</div><div class="term-v">60-day written notice</div><div class="term-sub">Either party; applies to full subscription</div></div>'
         + '<div class="term"><div class="term-k">Subscription Downgrade</div><div class="term-v">30-day notice</div><div class="term-sub">Tier or instance count reductions</div></div>'
-        + '<div class="term"><div class="term-k">Contract</div><div class="term-v">Annual, auto-renew</div></div>'
         + '<div class="term"><div class="term-k">Support</div><div class="term-v">Slack &amp; Email</div><div class="term-sub">Business hours · Standard SLA<br>+ 8h PS Advisory/mo included</div></div>'
       + '</div>'
-
-      + (isSI
-        ? '<div class="econ-band">'
-            + (discount > 0 ? '<div class="econ-item"><div class="econ-k">SI Discount Applied</div>'
-              + '<div class="econ-v">' + discount + '%</div>'
-              + '<div class="econ-sub">On monthly fees. Initiation at list price.</div></div>' : '')
-            + (psTotal > 0 ? '<div class="econ-item"><div class="econ-k">Est. PS Total</div>'
-              + '<div class="econ-v" style="color:var(--yellow)">~' + fmt(psTotal) + '</div>'
-              + '<div class="econ-sub">' + fmt(psMdRate) + '/MD &times; 20 days &times; ' + psFte + ' FTE &times; ' + (assessDur + migDur) + ' mo</div></div>' : '')
-            + '<div class="econ-item"><div class="econ-k">Tooling vs. Project Value</div>'
-              + '<div class="econ-v">10&ndash;15%</div>'
-              + '<div class="econ-sub">Platform cost as % of total migration.</div></div>'
-          + '</div>'
-        : '');
 
 
     // ── Build phase array for timeline ──
