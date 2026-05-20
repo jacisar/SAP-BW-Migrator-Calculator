@@ -795,10 +795,10 @@
       + (isSI ? '<div class="econ-band" style="border-radius:0;margin-top:0">'
           + '<div class="econ-item"><div class="econ-k">Est. Licence Costs (TCV)</div>'
             + '<div class="econ-v">' + fmt(totalCV) + '</div>'
-            + '<div class="econ-sub">BW Migrator fees over ' + totalMonths + ' months</div></div>'
+            + '<div class="econ-sub">Fees over ' + totalMonths + ' months · incl. 8h PS Advisory/mo</div></div>'
           + (psTotal > 0 ? '<div class="econ-item"><div class="econ-k">Est. PS Costs</div>'
             + '<div class="econ-v" style="color:var(--yellow)">~' + fmt(psTotal) + '</div>'
-            + '<div class="econ-sub">' + fmt(psMdRate) + '/MD &middot; ' + psFte + ' FTE (' + Math.round(psFte * 100) + '%) &middot; ' + (assessDur + migDur) + ' mo<br>Incl. 8h PS Advisory/mo per subscription</div></div>' : '')
+            + '<div class="econ-sub">' + fmt(psMdRate) + '/MD &middot; ' + psFte + ' FTE (' + Math.round(psFte * 100) + '%) &middot; ' + (assessDur + migDur) + ' mo</div></div>' : '')
           + (discount > 0 ? '<div class="econ-item"><div class="econ-k">SI Discount Applied</div>'
             + '<div class="econ-v">' + discount + '%</div>'
             + '<div class="econ-sub">On monthly fees. Initiation at list price.</div></div>' : '')
@@ -813,7 +813,7 @@
       + '<div class="terms-row">'
         + '<div class="term"><div class="term-k">Billing</div><div class="term-v">Monthly in advance</div></div>'
         + '<div class="term"><div class="term-k">Termination</div><div class="term-v">60-day written notice</div><div class="term-sub">Either party; applies to full subscription</div></div>'
-        + '<div class="term"><div class="term-k">Subscription Downgrade</div><div class="term-v">30-day notice</div><div class="term-sub">Tier or instance count reductions</div></div>'
+        + '<div class="term"><div class="term-k">Downgrade</div><div class="term-v">30-day notice</div><div class="term-sub">Tier or instance count reductions</div></div>'
         + '<div class="term"><div class="term-k">Support</div><div class="term-v">Slack &amp; Email</div><div class="term-sub">Business hours · Standard SLA<br>+ 8h PS Advisory/mo included</div></div>'
       + '</div>'
 
